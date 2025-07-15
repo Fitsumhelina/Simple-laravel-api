@@ -33,13 +33,10 @@ class AuthController extends Controller
             'password_confirmation' => 'required|string|min:8',
         ]);
     
-        
     
         if ($data['password'] !== $data['password_confirmation']) {
             return response()->json(['message' => 'Password and password confirmation do not match.'], 422);
         }
-
-
 
         $user = User::create([
             'name' => $data['name'],
@@ -48,9 +45,7 @@ class AuthController extends Controller
         ]);
 
         Auth::login($user);
-
         $token = $user->createToken('Personal Access Token')->plainTextToken;
-        
         return response()->json(['message' => 'User registered successfully', "token" =>$token ,'user' => $user], 201);
     }
     
@@ -72,7 +67,6 @@ class AuthController extends Controller
             ]);
         }
         $user = Auth::user();
-        
         $token = $user->createToken('Personal Access Token')->plainTextToken;
         return response()->json(['message' => 'Login successful', "token" =>$token ,'user' => $user]);
     }
