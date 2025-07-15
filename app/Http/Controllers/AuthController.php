@@ -26,24 +26,27 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return response()->json(['message' => 'User registered successfully', 'user' => $user], 201);
+        $token = $user->createToken('Personal Access Token')->plainTextToken;
+        
+        return response()->json(['message' => 'User registered successfully', "token" =>$token ,'user' => $user], 201);
     }
-
+    
     public function login(Request $request)
     {
         $credentials = $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
-        ]);
+            ]);
 
-        if (!Auth::attempt($credentials)) {
+            if (!Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
-
         $user = Auth::user();
-        return response()->json(['message' => 'Login successful', 'user' => $user]);
+        
+        $token = $user->createToken('Personal Access Token')->plainTextToken;
+        return response()->json(['message' => 'Login successful', "token" =>$token ,'user' => $user]);
     }
 
     public function logout(Request $request)
