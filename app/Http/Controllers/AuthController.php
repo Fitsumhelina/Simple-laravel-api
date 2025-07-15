@@ -61,6 +61,11 @@ class AuthController extends Controller
             'password' => 'required|string',
             ]);
 
+            $user = User::where('email', $credentials['email'])->first();
+            if (!$user) {
+                return response()->json(['message' => 'User not registered.'], 404);
+            }
+
             if (!Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
