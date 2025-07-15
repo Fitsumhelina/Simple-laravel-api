@@ -45,13 +45,9 @@ class AuthController extends Controller
         ]);
 
         Auth::login($user);
-
-        // Issue Sanctum token and set HttpOnly cookie
-        $token = $user->createToken('Personal Access Token')->plainTextToken;
-        $cookie = cookie('sanctum_token', $token, 60, null, null, true, true, false, 'Strict');
-
-        return response()->json(['message' => 'User registered successfully', 'user' => $user], 201)
-            ->withCookie($cookie);
+        // $request->session()->regenerate();
+        return response()->json(['message' => 'User registered successfully', 'user' => $user], 201);
+            
     }
 
     public function login(Request $request)
@@ -72,25 +68,19 @@ class AuthController extends Controller
             ]);
         }
 
-        // Issue Sanctum token and set HttpOnly cookie
-        $token = $user->createToken('Personal Access Token')->plainTextToken;
-        $cookie = cookie('sanctum_token', $token, 60, null, null, true, true, false, 'Strict');
-
-        return response()->json(['message' => 'Login successful', 'user' => $user])
-            ->withCookie($cookie);
+        $user = Auth::user();
+        // $request->session()->regenerate();
+        return response()->json(['message' => 'Login successful', 'user' => $user]);
+            
     }
 
     public function logout(Request $request)
     {
-        $user = $request->user();
-        if ($user) {
-            $user->tokens()->delete();
-            // Remove the sanctum_token cookie
-            $cookie = cookie('sanctum_token', '', -1, null, null, true, true, false, 'Strict');
-            return response()->json(['message' => 'Logged out successfully.'])
-                ->withCookie($cookie);
-        }
-        return response()->json(['error' => 'Please Login first'], 401);
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return response()->json(['message' => 'Logged out successfully.']);
     }
 
     public function user(Request $request)
