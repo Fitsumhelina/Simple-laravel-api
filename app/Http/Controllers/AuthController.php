@@ -79,14 +79,20 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return response()->json(['message' => 'Logout successful']);
+        $user = $request->user();
+        if ($user) {
+            $user->tokens()->delete();
+            return response()->json(['message' => 'Logged out successfully.']);
+        }
+        return response()->json(['error' => 'Please Login first'], 401);
     }
 
     public function user(Request $request)
     {
-        return response()->json(['user' => Auth::user()]);
+        $user = Auth::user();
+        if ($user) {
+            return response()->json(['user' => $user]);
+        }
+        return response()->json(['error' => 'User not logged in.'], 401);
     }
 }
