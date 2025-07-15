@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -25,15 +26,14 @@ class AuthController extends Controller
                 'missing_fields' => $missingFields
             ], 422);
         }
-    
+
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'password_confirmation' => 'required|string|min:8',
         ]);
-    
-    
+
         if ($data['password'] !== $data['password_confirmation']) {
             return response()->json(['message' => 'Password and password confirmation do not match.'], 422);
         }
@@ -45,30 +45,39 @@ class AuthController extends Controller
         ]);
 
         Auth::login($user);
+
+        // Issue Sanctum token and set HttpOnly cookie
         $token = $user->createToken('Personal Access Token')->plainTextToken;
-        return response()->json(['message' => 'User registered successfully', "token" =>$token ,'user' => $user], 201);
+        $cookie = cookie('sanctum_token', $token, 60, null, null, true, true, false, 'Strict');
+
+        return response()->json(['message' => 'User registered successfully', 'user' => $user], 201)
+            ->withCookie($cookie);
     }
-    
+
     public function login(Request $request)
     {
         $credentials = $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
-            ]);
+        ]);
 
-            $user = User::where('email', $credentials['email'])->first();
-            if (!$user) {
-                return response()->json(['message' => 'User not registered.'], 404);
-            }
+        $user = User::where('email', $credentials['email'])->first();
+        if (!$user) {
+            return response()->json(['message' => 'User not registered.'], 404);
+        }
 
-            if (!Auth::attempt($credentials)) {
+        if (!Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
-        $user = Auth::user();
+
+        // Issue Sanctum token and set HttpOnly cookie
         $token = $user->createToken('Personal Access Token')->plainTextToken;
-        return response()->json(['message' => 'Login successful', "token" =>$token ,'user' => $user]);
+        $cookie = cookie('sanctum_token', $token, 60, null, null, true, true, false, 'Strict');
+
+        return response()->json(['message' => 'Login successful', 'user' => $user])
+            ->withCookie($cookie);
     }
 
     public function logout(Request $request)
@@ -76,7 +85,10 @@ class AuthController extends Controller
         $user = $request->user();
         if ($user) {
             $user->tokens()->delete();
-            return response()->json(['message' => 'Logged out successfully.']);
+            // Remove the sanctum_token cookie
+            $cookie = cookie('sanctum_token', '', -1, null, null, true, true, false, 'Strict');
+            return response()->json(['message' => 'Logged out successfully.'])
+                ->withCookie($cookie);
         }
         return response()->json(['error' => 'Please Login first'], 401);
     }
